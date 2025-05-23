@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>High-Review Places Map</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script>
+        function initMap() {
+            const center = { lat: 22.5726, lng: 88.3639 }; 
+            const map = new google.maps.Map(document.getElementById("map"), {
+                center: center,
+                zoom: 16
+            });
+
+            const service = new google.maps.places.PlacesService(map);
+            let markers = [];
+            let processedResults = 0;
+
+            const processTextSearch = (results, status, pagination) => {
+                if (status !== google.maps.places.PlacesServiceStatus.OK) {
+                    console.error('PlacesService request failed:', status);
+                    return;
+                }
+
+                results.forEach(place => {
+                    if (place.geometry && place.geometry.location && 
+                        (place.user_ratings_total || 0) >= 500) {
+                        createMarker(place);
+                        processedResults++;
+                    }
+                });
+
+                console.log(`Processed ${processedResults} valid places`);
+
+                if (pagination && pagination.hasNextPage) {
+                    setTimeout(() => {
+                        pagination.nextPage();
+                    }, 2000);
+                }
+            };
+
+            const createMarker = (place) => {
+                const marker = new google.maps.Marker({
+                    position: place.geometry.location,
+                    map: map,
+                    title: place.name
+                });
+
+                const infowindow = new google.maps.InfoWindow({
+                    content: `<strong>${place.name}</strong><br>
+                            Rating: ${place.rating || 'N/A'}<br>
+                            Reviews: ${place.user_ratings_total || 'N/A'}<br>
+                            Type: ${place.types?.join(', ') || 'N/A'}`
+                });
+
+                marker.addListener("click", () => {
+                    infowindow.open({ anchor: marker, map });
+                });
+
+                markers.push(marker);
+            };
+
+            service.textSearch({
+                location: center,
+                radius: 10000, 
+                query: 'popular places' 
+            }, (results, status, pagination) => {
+                processTextSearch(results, status, pagination);
+            });
+        }
+    </script>
+
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-B53jugJwdMWpx1Cb1lqeB6i2a8FjwGw&libraries=places&callback=initMap">
+    </script>
+</body>
+</html>
